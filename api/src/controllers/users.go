@@ -22,7 +22,9 @@ import (
 	"api/src/models"
 	"api/src/repositories"
 	"api/src/responses"
+	"api/src/security"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -31,18 +33,17 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// CreateUser insets a new user into database
+// CreateUser creates a new "User" in database
 func CreateUser(w http.ResponseWriter, r *http.Request) {
 
-	requestBody, erro := ioutil.ReadAll(r.Body)
+	body, erro := ioutil.ReadAll(r.Body)
 	if erro != nil {
 		responses.Erro(w, http.StatusUnprocessableEntity, erro)
 		return
 	}
 
 	var user models.User
-
-	if erro = json.Unmarshal(requestBody, &user); erro != nil {
+	if erro = json.Unmarshal(body, &user); erro != nil {
 		responses.Erro(w, http.StatusBadRequest, erro)
 		return
 	}
@@ -58,9 +59,9 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository := repositories.NewUsersRepositories(db)
+	repository := repositories.NewUsersRepository(db)
 	user.ID, erro = repository.Create(user)
-	db.Close()
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
@@ -69,16 +70,20 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusCreated, user)
 }
 
-// GetUsers return all users from database
+// GetUsers with given "nick" or "email", will return all "Users" from database
 func GetUsers(w http.ResponseWriter, r *http.Request) {
-	nameOrNick := strings.ToLower(r.URL.Query().Get("user"))
+
+	nameOrNick := strings.ToLower(
+		r.URL.Query().Get("user"),
+	)
 
 	db, erro := database.Connect()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	repository := repositories.NewUsersRepositories(db)
+
+	repository := repositories.NewUsersRepository(db)
 	users, erro := repository.Search(nameOrNick)
 	defer db.Close()
 	if erro != nil {
@@ -89,10 +94,10 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusOK, users)
 }
 
-// GetUser return specific user from database
+// GetUser return specific "User" from database
 func GetUser(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
 
+	params := mux.Vars(r)
 	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
 	if erro != nil {
 		responses.Erro(w, http.StatusBadRequest, erro)
@@ -104,7 +109,7 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 	}
 
-	repository := repositories.NewUsersRepositories(db)
+	repository := repositories.NewUsersRepository(db)
 	user, erro := repository.SearchByID(userID)
 	defer db.Close()
 	if erro != nil {
@@ -115,11 +120,10 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusOK, user)
 }
 
-// UpdateUser upadate user attributes from database
+// UpdateUser upadate "User" attributes in database
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
-
 	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
 	if erro != nil {
 		responses.Erro(w, http.StatusBadRequest, erro)
@@ -133,18 +137,18 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userID != userIDInsideToken {
-		responses.Erro(w, http.StatusForbidden, erro)
+		responses.Erro(w, http.StatusForbidden, errors.New("permission denied"))
 		return
 	}
 
-	bodyReq, erro := ioutil.ReadAll(r.Body)
+	body, erro := ioutil.ReadAll(r.Body)
 	if erro != nil {
 		responses.Erro(w, http.StatusUnprocessableEntity, erro)
 		return
 	}
 
 	var user models.User
-	if erro := json.Unmarshal(bodyReq, &user); erro != nil {
+	if erro := json.Unmarshal(body, &user); erro != nil {
 		responses.Erro(w, http.StatusBadRequest, erro)
 		return
 	}
@@ -160,7 +164,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository := repositories.NewUsersRepositories(db)
+	repository := repositories.NewUsersRepository(db)
 	if erro := repository.Update(userID, user); erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
@@ -170,7 +174,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusNoContent, nil)
 }
 
-// DeleteUser deletes a user from database
+// DeleteUser deletes a "User" in database
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
@@ -187,7 +191,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if userID != userIDInsideToken {
-		responses.Erro(w, http.StatusForbidden, erro)
+		responses.Erro(w, http.StatusForbidden, errors.New("permission denied"))
 	}
 
 	db, erro := database.Connect()
@@ -196,12 +200,204 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository := repositories.NewUsersRepositories(db)
+	repository := repositories.NewUsersRepository(db)
 	if erro := repository.Delete(userID); erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
 	defer db.Close()
+
+	responses.JSON(w, http.StatusNoContent, nil)
+}
+
+// FollowUser permits an "User" to "Follow" another "User"
+func FollowUser(w http.ResponseWriter, r *http.Request) {
+
+	followerID, erro := authentication.ExtractUserID(r)
+	if erro != nil {
+		responses.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
+	params := mux.Vars(r)
+	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
+	if erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	if followerID == userID {
+		responses.Erro(w, http.StatusForbidden, errors.New("is not possible to follow itself"))
+		return
+	}
+
+	db, erro := database.Connect()
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	repository := repositories.NewUsersRepository(db)
+	if erro := repository.Follow(userID, followerID); erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	responses.JSON(w, http.StatusNoContent, nil)
+}
+
+// UnFollowUser permits an "User" to "Unfollow" another "User"
+func UnFollowUser(w http.ResponseWriter, r *http.Request) {
+
+	followerID, erro := authentication.ExtractUserID(r)
+	if erro != nil {
+		responses.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
+	params := mux.Vars(r)
+	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
+	if erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	if followerID == userID {
+		responses.Erro(w, http.StatusForbidden, errors.New("is not possible to unfollow itself"))
+		return
+	}
+
+	db, erro := database.Connect()
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	repository := repositories.NewUsersRepository(db)
+	if erro := repository.UnFollow(userID, followerID); erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	responses.JSON(w, http.StatusNoContent, nil)
+}
+
+// GetFollowers return all "Followers" from specific "User"
+func GetFollowers(w http.ResponseWriter, r *http.Request) {
+
+	params := mux.Vars(r)
+	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
+	if erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := database.Connect()
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	repository := repositories.NewUsersRepository(db)
+	followers, erro := repository.GetFollowers(userID)
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	responses.JSON(w, http.StatusOK, followers)
+}
+
+// GetFollowing return all "Users" a "User" is "Following"
+func GetFollowing(w http.ResponseWriter, r *http.Request) {
+
+	params := mux.Vars(r)
+	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
+	if erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := database.Connect()
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	repository := repositories.NewUsersRepository(db)
+	users, erro := repository.GetFollowing(userID)
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	responses.JSON(w, http.StatusOK, users)
+}
+
+// UpdatePass update an "User" password
+func UpdatePass(w http.ResponseWriter, r *http.Request) {
+
+	userIDInsideToken, erro := authentication.ExtractUserID(r)
+	if erro != nil {
+		responses.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
+	params := mux.Vars(r)
+	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
+	if erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	if userIDInsideToken != userID {
+		responses.Erro(w, http.StatusForbidden, errors.New("is only allowed to update your own password"))
+		return
+	}
+
+	body, erro := ioutil.ReadAll(r.Body)
+	if erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	var pass models.Pass
+	if erro := json.Unmarshal(body, &pass); erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := database.Connect()
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	repository := repositories.NewUsersRepository(db)
+	userPassHash, erro := repository.GetUserPass(userID)
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+	}
+
+	if erro := security.ValidatePass(userPassHash, pass.Current); erro != nil {
+		responses.Erro(w, http.StatusUnauthorized, errors.New("the password is incorrect"))
+		return
+	}
+
+	hashedPass, erro := security.Hash(pass.New)
+	if erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	if erro := repository.UpadateUserPass(userID, string(hashedPass)); erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }

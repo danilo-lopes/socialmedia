@@ -30,6 +30,8 @@ func main() {
 
 	config.Load()
 
-	fmt.Printf("Running API Service on Port %d", config.APIPort)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", config.APIPort), r))
+	fmt.Printf("Serving on Port %d\n", config.APIPort)
+	log.Fatal(http.ListenAndServe(
+		fmt.Sprintf(":%d", config.APIPort), r),
+	)
 }

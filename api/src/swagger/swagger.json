@@ -1,0 +1,37 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "The API represents the backend service for the social media application",
+        "version": "1.0.0",
+        "title": "Social Media API",
+        "contact": {
+            "email": "lopesd.dan@gmail.com"
+        },
+        "license": {
+            "name": "MIT License",
+            "url": "https://opensource.org/licenses/Apache-2.0"
+        }
+    },
+    "host": "localhost:6000",
+    "basePath": "/",
+    "tags": [
+        {
+            "name": "Users"
+        },
+        {
+            "name": "Posts"
+        },
+        {
+            "name": "Followers"
+        }
+    ],
+    "schemes": [
+        "http"
+    ],
+    "paths": {},
+    "definitions": {},
+    "externalDocs": {
+        "description": "Find out more about Swagger",
+        "url": "http://swagger.io"
+    }
+}

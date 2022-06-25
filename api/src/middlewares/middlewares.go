@@ -26,12 +26,13 @@ import (
 // Logger log the request information in terminal
 func Logger(nextFunction http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("\n %s %s %s", r.Method, r.RequestURI, r.Host)
+
+		log.Printf("%s - - '%s %s %s' -", r.Host, r.Method, r.RequestURI, r.Proto)
 		nextFunction(w, r)
 	}
 }
 
-// Authenticate validates if the user is authenticated
+// Authenticate validates if the User is authenticated
 func Authenticate(nextFunction http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if erro := authentication.ValidateToken(r); erro != nil {

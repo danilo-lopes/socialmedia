@@ -22,8 +22,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Generate returns mux router
+// Generate generate all API routes configured.
 func Generate() *mux.Router {
+
 	r := mux.NewRouter()
 
 	return routes.Configure(r)

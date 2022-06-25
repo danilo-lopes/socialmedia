@@ -21,7 +21,7 @@ import (
 	"net/http"
 )
 
-var routeLogin = Route{
+var loginRoute = Route{
 	URI:                    "/login",
 	Method:                 http.MethodPost,
 	Function:               controllers.Login,

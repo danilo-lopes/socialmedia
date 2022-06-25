@@ -24,22 +24,22 @@ import (
 	"api/src/responses"
 	"api/src/security"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 )
 
-// Login is resposible to authenticate an user in API
+// Login authenticate an "User"
 func Login(w http.ResponseWriter, r *http.Request) {
 
-	reqBody, erro := ioutil.ReadAll(r.Body)
+	body, erro := ioutil.ReadAll(r.Body)
 	if erro != nil {
 		responses.Erro(w, http.StatusUnprocessableEntity, erro)
 		return
 	}
 
 	var user models.User
-
-	if erro := json.Unmarshal(reqBody, &user); erro != nil {
+	if erro := json.Unmarshal(body, &user); erro != nil {
 		responses.Erro(w, http.StatusBadRequest, erro)
 		return
 	}
@@ -50,20 +50,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository := repositories.NewUsersRepositories(db)
-	userSaved, erro := repository.SearchByEmail(user.Email)
+	repository := repositories.NewUsersRepository(db)
+	userFromDB, erro := repository.SearchByEmail(user.Email)
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
 	defer db.Close()
 
-	if erro := security.ValidatePass(userSaved.Pass, user.Pass); erro != nil {
-		responses.Erro(w, http.StatusUnauthorized, erro)
+	if erro := security.ValidatePass(userFromDB.Pass, user.Pass); erro != nil {
+		responses.Erro(w, http.StatusUnauthorized, errors.New("incorrect password"))
 		return
 	}
 
-	token, erro := authentication.GenerateToken(userSaved.ID)
+	token, erro := authentication.GenerateToken(userFromDB.ID)
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return

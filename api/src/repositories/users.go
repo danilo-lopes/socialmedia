@@ -22,17 +22,17 @@ import (
 	"fmt"
 )
 
-type users struct {
+type usersRepository struct {
 	db *sql.DB
 }
 
-// NewUsersRepositories creates a users repositories
-func NewUsersRepositories(db *sql.DB) *users {
-	return &users{db}
+// NewUsersRepository creates a "users" repository
+func NewUsersRepository(db *sql.DB) *usersRepository {
+	return &usersRepository{db}
 }
 
-// Create creates a User into database
-func (repository users) Create(user models.User) (uint64, error) {
+// Create creates a "User" in database
+func (repository usersRepository) Create(user models.User) (uint64, error) {
 
 	statement, erro := repository.db.Prepare(
 		"INSERT INTO users (name, nick, email, pass) VALUES (?, ?, ?, ?)",
@@ -56,7 +56,7 @@ func (repository users) Create(user models.User) (uint64, error) {
 }
 
 // Search return all Users or Nicknames matching with the filter(nameOrNick)
-func (repository users) Search(nameOrNick string) ([]models.User, error) {
+func (repository usersRepository) Search(nameOrNick string) ([]models.User, error) {
 	nameOrNick = fmt.Sprintf("%%%s%%", nameOrNick) // %nameOrNick%
 
 	lines, erro := repository.db.Query(
@@ -91,7 +91,7 @@ func (repository users) Search(nameOrNick string) ([]models.User, error) {
 }
 
 // SearchByID return the User matching with the ID
-func (repository users) SearchByID(ID uint64) (models.User, error) {
+func (repository usersRepository) SearchByID(ID uint64) (models.User, error) {
 	lines, erro := repository.db.Query(
 		"SELECT id, name, nick, email, createdat FROM users WHERE id = ?",
 		ID,
@@ -118,8 +118,8 @@ func (repository users) SearchByID(ID uint64) (models.User, error) {
 	return user, nil
 }
 
-// SearchEmail search an user by email and returns the id and the password hash
-func (repository users) SearchByEmail(email string) (models.User, error) {
+// SearchByEmail search an user by email and returns the id and the password hash
+func (repository usersRepository) SearchByEmail(email string) (models.User, error) {
 	line, erro := repository.db.Query(
 		"SELECT id, pass FROM users WHERE email = ?",
 		email,
@@ -144,7 +144,7 @@ func (repository users) SearchByEmail(email string) (models.User, error) {
 }
 
 // Update updates an Users attributes into database
-func (repository users) Update(ID uint64, user models.User) error {
+func (repository usersRepository) Update(ID uint64, user models.User) error {
 
 	statement, erro := repository.db.Prepare(
 		"UPDATE users SET name = ?, nick = ?, email = ? WHERE id = ?",
@@ -162,7 +162,7 @@ func (repository users) Update(ID uint64, user models.User) error {
 }
 
 // Delete delete an User into database
-func (repository users) Delete(ID uint64) error {
+func (repository usersRepository) Delete(ID uint64) error {
 
 	statement, erro := repository.db.Prepare(
 		"DELETE FROM users WHERE id = ?",
@@ -173,6 +173,153 @@ func (repository users) Delete(ID uint64) error {
 	defer statement.Close()
 
 	if _, erro := statement.Exec(ID); erro != nil {
+		return erro
+	}
+
+	return nil
+}
+
+//Follow permits an User to follow another User
+func (repository usersRepository) Follow(userID, followerID uint64) error {
+
+	statement, erro := repository.db.Prepare(
+		"INSERT IGNORE INTO followers (user_id, follower_id) VALUES (?, ?)",
+	)
+	if erro != nil {
+		return erro
+	}
+	defer statement.Close()
+
+	if _, erro := statement.Exec(userID, followerID); erro != nil {
+		return erro
+	}
+
+	return nil
+}
+
+//Follow permits an User to unfollow another User
+func (repository usersRepository) UnFollow(userID, followerID uint64) error {
+
+	statement, erro := repository.db.Prepare(
+		"DELETE FROM followers WHERE user_id = ? and follower_id = ? ",
+	)
+	if erro != nil {
+		return erro
+	}
+	defer statement.Close()
+
+	if _, erro := statement.Exec(userID, followerID); erro != nil {
+		return erro
+	}
+
+	return nil
+}
+
+//GetFollowers return all followers from User
+func (repository usersRepository) GetFollowers(userID uint64) ([]models.User, error) {
+
+	lines, erro := repository.db.Query(`
+		SELECT u.id, u.name, u.nick, u.email, u.createdat
+		FROM users u INNER JOIN followers s on u.id = s.follower_id WHERE s.user_id = ?
+	`, userID,
+	)
+	if erro != nil {
+		return nil, erro
+	}
+	defer lines.Close()
+
+	var followers []models.User
+
+	for lines.Next() {
+		var follower models.User
+
+		if erro := lines.Scan(
+			&follower.ID,
+			&follower.Name,
+			&follower.Nick,
+			&follower.Email,
+			&follower.CreatedAt,
+		); erro != nil {
+			return nil, erro
+		}
+
+		followers = append(followers, follower)
+	}
+
+	return followers, nil
+}
+
+//GetFollowing return all users one user is following
+func (repository usersRepository) GetFollowing(userID uint64) ([]models.User, error) {
+
+	lines, erro := repository.db.Query(`
+		SELECT u.id, u.name, u.nick, u.email, u.createdat
+		FROM users u INNER JOIN followers s on u.id = s.user_id WHERE s.follower_id = ?
+	`, userID,
+	)
+	if erro != nil {
+		return nil, erro
+	}
+	defer lines.Close()
+
+	var users []models.User
+
+	for lines.Next() {
+		var user models.User
+
+		if erro := lines.Scan(
+			&user.ID,
+			&user.Name,
+			&user.Nick,
+			&user.Email,
+			&user.CreatedAt,
+		); erro != nil {
+			return nil, erro
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+// GetUserPass return the user password thought ID
+func (repository usersRepository) GetUserPass(userID uint64) (string, error) {
+
+	line, erro := repository.db.Query(
+		"SELECT pass FROM users WHERE id = ?",
+		userID,
+	)
+	if erro != nil {
+		return "", erro
+	}
+	defer line.Close()
+
+	var user models.User
+
+	if line.Next() {
+		if erro := line.Scan(
+			&user.Pass,
+		); erro != nil {
+			return "", erro
+		}
+	}
+
+	return user.Pass, nil
+}
+
+// UpadateUserPass update the user pass
+func (repository usersRepository) UpadateUserPass(userID uint64, pass string) error {
+
+	statement, erro := repository.db.Prepare(
+		"UPDATE users SET pass = ? WHERE id = ?",
+	)
+	if erro != nil {
+		return erro
+	}
+	defer statement.Close()
+
+	if _, erro = statement.Exec(pass, userID); erro != nil {
 		return erro
 	}
 

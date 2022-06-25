@@ -23,7 +23,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Route represents all API routes
+// Route represents an API route
 type Route struct {
 	URI                    string
 	Method                 string
@@ -31,20 +31,22 @@ type Route struct {
 	AuthenticationRequired bool
 }
 
-// Configure initialize all routes into mux router
+// Configure instanciate all API routes into mux router
 func Configure(r *mux.Router) *mux.Router {
-	routes := usersRoutes
-	routes = append(routes, routeLogin)
 
-	for _, route := range routes {
-		if route.AuthenticationRequired {
-			r.HandleFunc(route.URI,
-				middlewares.Logger(middlewares.Authenticate(route.Function)),
-			).Methods(route.Method)
+	apiRoutes := usersRoutes
+	apiRoutes = append(apiRoutes, loginRoute)
+	apiRoutes = append(apiRoutes, publicationsRoutes...)
+
+	for _, apiRoute := range apiRoutes {
+		if apiRoute.AuthenticationRequired {
+			r.HandleFunc(apiRoute.URI,
+				middlewares.Logger(middlewares.Authenticate(apiRoute.Function)),
+			).Methods(apiRoute.Method)
 		} else {
-			r.HandleFunc(route.URI,
-				middlewares.Logger(route.Function),
-			).Methods(route.Method)
+			r.HandleFunc(apiRoute.URI,
+				middlewares.Logger(apiRoute.Function),
+			).Methods(apiRoute.Method)
 		}
 	}
 
