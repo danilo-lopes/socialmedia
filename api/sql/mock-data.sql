@@ -18,3 +18,8 @@ INSERT INTO followers(user_id, follower_id) VALUES
     (4, 1),
     (2, 1),
     (3, 4);
+
+INSERT INTO publications(title, content, author_id) VALUES
+    ("User1 Publication", "This is the publication of User 1 !, oooohh", 1),
+    ("User2 Publication", "This is the publication of User 2 !, oooohh", 2),
+    ("User3 Publication", "This is the publication of User 3 !, oooohh", 3);
