@@ -401,3 +401,30 @@ func UpdatePass(w http.ResponseWriter, r *http.Request) {
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }
+
+// LikedPublications return all publications a user liked
+func LikedPublications(w http.ResponseWriter, r *http.Request) {
+
+	params := mux.Vars(r)
+	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
+	if erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := database.Connect()
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	repository := repositories.NewUsersRepository(db)
+	publications, erro := repository.LikedPublications(userID)
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	responses.JSON(w, http.StatusOK, publications)
+}

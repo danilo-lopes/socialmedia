@@ -180,15 +180,39 @@ func (repository PublicationsRepository) GetByUser(userID uint64) ([]models.Publ
 }
 
 // LikePublication likes an publication in database
-func (repository PublicationsRepository) LikePublication(publicationID uint64) error {
+func (repository PublicationsRepository) LikePublication(publicationID, likerID uint64) error {
 
-	statement, erro := repository.db.Prepare("UPDATE publications SET likes = likes + 1 WHERE id = ?")
+	tx, erro := repository.db.Begin()
 	if erro != nil {
 		return erro
 	}
-	defer statement.Close()
 
-	if _, erro := statement.Exec(publicationID); erro != nil {
+	sqlQueries := []string{
+		"INSERT INTO likes_of_publications(publication_id, liker_id) VALUES (?, ?)",
+		"UPDATE publications SET likes = likes + 1 WHERE id = ?",
+	}
+
+	for sqlQueryIndex, query := range sqlQueries {
+		if sqlQueryIndex == 0 {
+			if _, erro = repository.db.Exec(
+				query,
+				publicationID, likerID,
+			); erro != nil {
+				tx.Rollback()
+				return erro
+			}
+		} else if sqlQueryIndex == 1 {
+			if _, erro = repository.db.Exec(
+				query,
+				publicationID,
+			); erro != nil {
+				tx.Rollback()
+				return erro
+			}
+		}
+	}
+
+	if erro := tx.Commit(); erro != nil {
 		return erro
 	}
 
@@ -196,24 +220,80 @@ func (repository PublicationsRepository) LikePublication(publicationID uint64) e
 }
 
 // UnLikePublication unlikes an publication in database
-func (repository PublicationsRepository) UnLikePublication(publicationID uint64) error {
+func (repository PublicationsRepository) UnLikePublication(publicationID, unLikerID uint64) error {
 
-	statement, erro := repository.db.Prepare(`
+	tx, erro := repository.db.Begin()
+	if erro != nil {
+		return erro
+	}
+
+	sqlQueries := []string{`
 		UPDATE publications SET likes =
 		CASE
 			WHEN likes > 0 THEN likes - 1
 		ELSE 0
 		END
 		WHERE id = ?
-	`)
-	if erro != nil {
-		return erro
+		`,
+		`
+		DELETE FROM likes_of_publications WHERE publication_id = ? AND liker_id = ?
+		`,
 	}
-	defer statement.Close()
 
-	if _, erro := statement.Exec(publicationID); erro != nil {
+	for sqlQueryIndex, query := range sqlQueries {
+		if sqlQueryIndex == 0 {
+			if _, erro = repository.db.Exec(
+				query,
+				publicationID,
+			); erro != nil {
+				tx.Rollback()
+				return erro
+			}
+		} else if sqlQueryIndex == 1 {
+			if _, erro = repository.db.Exec(
+				query,
+				publicationID, unLikerID,
+			); erro != nil {
+				tx.Rollback()
+				return erro
+			}
+		}
+	}
+
+	if erro := tx.Commit(); erro != nil {
 		return erro
 	}
 
 	return nil
+}
+
+// GetLikers return all users who like an publication
+func (repository PublicationsRepository) GetLikers(publicationID uint64) ([]models.User, error) {
+
+	lines, erro := repository.db.Query(`
+		SELECT u.id, u.name, u.nick, u.createdat FROM
+		users u JOIN likes_of_publications p on u.id = p.liker_id WHERE p.publication_id = ?;
+	`, publicationID)
+	if erro != nil {
+		return nil, erro
+	}
+
+	var users []models.User
+
+	for lines.Next() {
+		var user models.User
+
+		if erro := lines.Scan(
+			&user.ID,
+			&user.Name,
+			&user.Nick,
+			&user.CreatedAt,
+		); erro != nil {
+			return nil, erro
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
 }

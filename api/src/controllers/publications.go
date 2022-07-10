@@ -255,6 +255,12 @@ func LikePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	likerID, erro := authentication.ExtractUserID(r)
+	if erro != nil {
+		responses.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
 	db, erro := database.Connect()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
@@ -262,7 +268,7 @@ func LikePublication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repository := repositories.NewPublicationRepository(db)
-	if erro := repository.LikePublication(publicationID); erro != nil {
+	if erro := repository.LikePublication(publicationID, likerID); erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
@@ -281,6 +287,12 @@ func UnLikePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	unLikerID, erro := authentication.ExtractUserID(r)
+	if erro != nil {
+		responses.Erro(w, http.StatusUnauthorized, erro)
+		return
+	}
+
 	db, erro := database.Connect()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
@@ -288,11 +300,38 @@ func UnLikePublication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repository := repositories.NewPublicationRepository(db)
-	if erro := repository.UnLikePublication(publicationID); erro != nil {
+	if erro := repository.UnLikePublication(publicationID, unLikerID); erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
 	defer db.Close()
 
 	responses.JSON(w, http.StatusNoContent, nil)
+}
+
+// GetLikers return all users who liked an publication
+func GetLikers(w http.ResponseWriter, r *http.Request) {
+
+	params := mux.Vars(r)
+	publicationID, erro := strconv.ParseUint(params["publicationID"], 10, 64)
+	if erro != nil {
+		responses.Erro(w, http.StatusBadRequest, erro)
+		return
+	}
+
+	db, erro := database.Connect()
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+
+	repository := repositories.NewPublicationRepository(db)
+	users, erro := repository.GetLikers(publicationID)
+	if erro != nil {
+		responses.Erro(w, http.StatusInternalServerError, erro)
+		return
+	}
+	defer db.Close()
+
+	responses.JSON(w, http.StatusOK, users)
 }

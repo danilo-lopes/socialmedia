@@ -31,3 +31,11 @@ CREATE TABLE publications(
     likes INT DEFAULT 0,
     createdat TIMESTAMP DEFAULT current_timestamp()
 ) ENGINE=INNODB;
+
+CREATE TABLE likes_of_publications(
+    publication_id INT NOT NULL,
+        FOREIGN KEY(publication_id) REFERENCES publications(id) ON DELETE CASCADE,
+    liker_id INT NOT NULL,
+        FOREIGN KEY(liker_id) REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY(publication_id, liker_id)
+) ENGINE=INNODB;

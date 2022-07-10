@@ -325,3 +325,40 @@ func (repository usersRepository) UpadateUserPass(userID uint64, pass string) er
 
 	return nil
 }
+
+// LikedPublication return all publications and user liked
+func (repository usersRepository) LikedPublications(userID uint64) ([]models.Publication, error) {
+
+	lines, erro := repository.db.Query(`
+		SELECT DISTINCT p.* FROM publications p
+		JOIN likes_of_publications l on p.id = l.publication_id
+		JOIN users u on u.id = p.author_id
+		WHERE u.id = ? OR l.liker_id = ?;
+	`, userID, userID,
+	)
+	if erro != nil {
+		return nil, erro
+	}
+	defer lines.Close()
+
+	var publications []models.Publication
+
+	for lines.Next() {
+		var publication models.Publication
+
+		if erro := lines.Scan(
+			&publication.ID,
+			&publication.Title,
+			&publication.Content,
+			&publication.AuthorID,
+			&publication.Likes,
+			&publication.CreatedAt,
+		); erro != nil {
+			return nil, erro
+		}
+
+		publications = append(publications, publication)
+	}
+
+	return publications, nil
+}

@@ -54,4 +54,10 @@ var publicationsRoutes = []Route{
 		Function:               controllers.UnLikePublication,
 		AuthenticationRequired: true,
 	},
+	{
+		URI:                    "/publications/{publicationID}/likers",
+		Method:                 http.MethodGet,
+		Function:               controllers.GetLikers,
+		AuthenticationRequired: true,
+	},
 }

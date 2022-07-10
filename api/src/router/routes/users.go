@@ -82,4 +82,10 @@ var usersRoutes = []Route{
 		Function:               controllers.UpdatePass,
 		AuthenticationRequired: true,
 	},
+	{
+		URI:                    "/users/{userID}/likedPublications",
+		Method:                 http.MethodGet,
+		Function:               controllers.LikedPublications,
+		AuthenticationRequired: true,
+	},
 }
