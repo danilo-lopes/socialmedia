@@ -22,9 +22,19 @@ import (
 	"net/http"
 )
 
+func PlainText(w http.ResponseWriter, statusCode int, data []string) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(statusCode)
+
+	if len(data) > 0 {
+		for _, metric := range data {
+			w.Write([]byte(metric))
+		}
+	}
+}
+
 // JSON returns json response
 func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 

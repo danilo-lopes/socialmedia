@@ -1,3 +1,6 @@
+CREATE USER IF NOT EXISTS 'sm_svc'@'%' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON sm.* TO 'sm_svc'@'%';
+
 CREATE DATABASE IF NOT EXISTS sm;
 USE sm;
 

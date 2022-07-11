@@ -35,7 +35,6 @@ import (
 
 // CreateUser creates a new "User" in database
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-
 	body, erro := ioutil.ReadAll(r.Body)
 	if erro != nil {
 		responses.Erro(w, http.StatusUnprocessableEntity, erro)
@@ -72,7 +71,6 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 // GetUsers with given "nick" or "email", will return all "Users" from database
 func GetUsers(w http.ResponseWriter, r *http.Request) {
-
 	nameOrNick := strings.ToLower(
 		r.URL.Query().Get("user"),
 	)
@@ -96,7 +94,6 @@ func GetUsers(w http.ResponseWriter, r *http.Request) {
 
 // GetUser return specific "User" from database
 func GetUser(w http.ResponseWriter, r *http.Request) {
-
 	params := mux.Vars(r)
 	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
 	if erro != nil {
@@ -122,7 +119,6 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUser upadate "User" attributes in database
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-
 	params := mux.Vars(r)
 	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
 	if erro != nil {
@@ -176,7 +172,6 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 // DeleteUser deletes a "User" in database
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
-
 	params := mux.Vars(r)
 	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
 	if erro != nil {
@@ -212,7 +207,6 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 // FollowUser permits an "User" to "Follow" another "User"
 func FollowUser(w http.ResponseWriter, r *http.Request) {
-
 	followerID, erro := authentication.ExtractUserID(r)
 	if erro != nil {
 		responses.Erro(w, http.StatusUnauthorized, erro)
@@ -249,7 +243,6 @@ func FollowUser(w http.ResponseWriter, r *http.Request) {
 
 // UnFollowUser permits an "User" to "Unfollow" another "User"
 func UnFollowUser(w http.ResponseWriter, r *http.Request) {
-
 	followerID, erro := authentication.ExtractUserID(r)
 	if erro != nil {
 		responses.Erro(w, http.StatusUnauthorized, erro)
@@ -286,7 +279,6 @@ func UnFollowUser(w http.ResponseWriter, r *http.Request) {
 
 // GetFollowers return all "Followers" from specific "User"
 func GetFollowers(w http.ResponseWriter, r *http.Request) {
-
 	params := mux.Vars(r)
 	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
 	if erro != nil {
@@ -313,7 +305,6 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 
 // GetFollowing return all "Users" a "User" is "Following"
 func GetFollowing(w http.ResponseWriter, r *http.Request) {
-
 	params := mux.Vars(r)
 	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
 	if erro != nil {
@@ -340,7 +331,6 @@ func GetFollowing(w http.ResponseWriter, r *http.Request) {
 
 // UpdatePass update an "User" password
 func UpdatePass(w http.ResponseWriter, r *http.Request) {
-
 	userIDInsideToken, erro := authentication.ExtractUserID(r)
 	if erro != nil {
 		responses.Erro(w, http.StatusUnauthorized, erro)
@@ -404,7 +394,6 @@ func UpdatePass(w http.ResponseWriter, r *http.Request) {
 
 // LikedPublications return all publications a user liked
 func LikedPublications(w http.ResponseWriter, r *http.Request) {
-
 	params := mux.Vars(r)
 	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
 	if erro != nil {

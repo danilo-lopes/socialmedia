@@ -29,9 +29,8 @@ import (
 	"net/http"
 )
 
-// Login authenticate an "User"
+// Login authenticate an User
 func Login(w http.ResponseWriter, r *http.Request) {
-
 	body, erro := ioutil.ReadAll(r.Body)
 	if erro != nil {
 		responses.Erro(w, http.StatusUnprocessableEntity, erro)

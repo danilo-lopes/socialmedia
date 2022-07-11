@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+
+  database:
+    container_name: database
+    ports:
+    - "3306:3306"
+    image: mysql/mysql-server:8.0
+    volumes:
+    - db-data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: sm
+      MYSQL_USER: sm_svc
+      MYSQL_PASSWORD: sm
+    networks:
+      - sm_network
+
+  sm:
+    container_name: sm
+    depends_on:
+    - database
+    image: socialmedia:2.2
+    ports:
+    - "8080:8080"
+    restart: always
+    environment:
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_USER: sm_svc
+      DB_PASS: password
+      DB_NAME: sm
+      API_PORT: 8080
+      SECRET_KEY: 'eMIXPdLcB1FIDE0OPjBIc9+X/By3yI0f4z3CKAoatYF+gCEnljSL+wCTEBzCLv7A'
+    networks:
+      - sm_network
+
+networks:
+  sm_network:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /Users/dansolo/.docker-volumes/mysql/socialmedia

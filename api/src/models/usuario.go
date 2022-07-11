@@ -73,7 +73,6 @@ func (user *User) test(stage string) error {
 }
 
 func (user *User) format(stage string) error {
-
 	user.Name = strings.TrimSpace(user.Name)
 	user.Nick = strings.TrimSpace(user.Nick)
 	user.Email = strings.TrimSpace(user.Email)

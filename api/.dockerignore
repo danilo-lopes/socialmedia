@@ -1,0 +1,5 @@
+.env
+.sql
+sql
+*.md
+Dockerfile

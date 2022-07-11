@@ -20,18 +20,13 @@ import (
 	"api/src/config"
 	"database/sql"
 
-	_ "github.com/go-sql-driver/mysql" // MySQL database Driver
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // Connect open mysql database tcp connection.
 func Connect() (*sql.DB, error) {
 	db, erro := sql.Open("mysql", config.DatabaseStringConnection)
 	if erro != nil {
-		return nil, erro
-	}
-
-	if erro := db.Ping(); erro != nil {
-		db.Close()
 		return nil, erro
 	}
 

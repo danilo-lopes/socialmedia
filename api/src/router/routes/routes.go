@@ -33,12 +33,14 @@ type Route struct {
 
 // Configure instanciate all API routes into mux router
 func Configure(r *mux.Router) *mux.Router {
-
 	apiRoutes := usersRoutes
 	apiRoutes = append(apiRoutes, loginRoute)
 	apiRoutes = append(apiRoutes, publicationsRoutes...)
+	apiRoutes = append(apiRoutes, healthcheckRoutes...)
+	apiRoutes = append(apiRoutes, metricRoutes)
 
 	for _, apiRoute := range apiRoutes {
+
 		if apiRoute.AuthenticationRequired {
 			r.HandleFunc(apiRoute.URI,
 				middlewares.Logger(middlewares.Authenticate(apiRoute.Function)),
@@ -49,6 +51,5 @@ func Configure(r *mux.Router) *mux.Router {
 			).Methods(apiRoute.Method)
 		}
 	}
-
 	return r
 }

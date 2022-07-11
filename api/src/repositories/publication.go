@@ -1,7 +1,24 @@
+/*
+Copyright 2022 Danilo S. Lopes.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at:
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package repositories
 
 import (
 	"api/src/models"
+	"context"
 	"database/sql"
 )
 
@@ -9,14 +26,13 @@ type PublicationsRepository struct {
 	db *sql.DB
 }
 
-// NewPublicationRepository creates a "Publication" repository
+// NewPublicationRepository creates a Publication repository
 func NewPublicationRepository(db *sql.DB) *PublicationsRepository {
 	return &PublicationsRepository{db}
 }
 
 // Create create post in database
 func (repository PublicationsRepository) Create(post models.Publication) (uint64, error) {
-
 	statement, erro := repository.db.Prepare(
 		"INSERT INTO publications (title, content, author_id) VALUES (?, ?, ?)",
 	)
@@ -40,7 +56,6 @@ func (repository PublicationsRepository) Create(post models.Publication) (uint64
 
 // SearchByID return one publication in database
 func (repository PublicationsRepository) SearchByID(publicationID uint64) (models.Publication, error) {
-
 	line, erro := repository.db.Query(`
 		SELECT p.*, u.nick FROM publications p JOIN users u
 		ON u.id = p.author_id WHERE p.id = ?`,
@@ -72,7 +87,6 @@ func (repository PublicationsRepository) SearchByID(publicationID uint64) (model
 
 // Get return all publications related by an user(self publications and his friends publications)
 func (repository PublicationsRepository) Get(userID uint64) ([]models.Publication, error) {
-
 	lines, erro := repository.db.Query(`
 		SELECT DISTINCT p.*, u.nick from publications p
 		JOIN users u on u.id = p.author_id
@@ -109,7 +123,6 @@ func (repository PublicationsRepository) Get(userID uint64) ([]models.Publicatio
 
 // Update updates an publication in database
 func (repository PublicationsRepository) Update(publicationID uint64, publication models.Publication) error {
-
 	statement, erro := repository.db.Prepare(
 		"UPDATE publications SET title = ?, content = ? WHERE id = ?",
 	)
@@ -127,7 +140,6 @@ func (repository PublicationsRepository) Update(publicationID uint64, publicatio
 
 // Delete deletes an publication in database
 func (repository PublicationsRepository) Delete(publicationID uint64) error {
-
 	statement, erro := repository.db.Prepare(
 		"DELETE FROM publications WHERE id = ?",
 	)
@@ -145,7 +157,6 @@ func (repository PublicationsRepository) Delete(publicationID uint64) error {
 
 // GetByUser return all publications from an user
 func (repository PublicationsRepository) GetByUser(userID uint64) ([]models.Publication, error) {
-
 	lines, erro := repository.db.Query(`
 		SELECT p.*, u.nick from publications
 		JOIN users u on u.id = p.author_id
@@ -181,8 +192,8 @@ func (repository PublicationsRepository) GetByUser(userID uint64) ([]models.Publ
 
 // LikePublication likes an publication in database
 func (repository PublicationsRepository) LikePublication(publicationID, likerID uint64) error {
-
-	tx, erro := repository.db.Begin()
+	ctx := context.Background()
+	tx, erro := repository.db.BeginTx(ctx, nil)
 	if erro != nil {
 		return erro
 	}
@@ -194,7 +205,8 @@ func (repository PublicationsRepository) LikePublication(publicationID, likerID 
 
 	for sqlQueryIndex, query := range sqlQueries {
 		if sqlQueryIndex == 0 {
-			if _, erro = repository.db.Exec(
+			if _, erro = tx.ExecContext(
+				ctx,
 				query,
 				publicationID, likerID,
 			); erro != nil {
@@ -202,7 +214,8 @@ func (repository PublicationsRepository) LikePublication(publicationID, likerID 
 				return erro
 			}
 		} else if sqlQueryIndex == 1 {
-			if _, erro = repository.db.Exec(
+			if _, erro = tx.ExecContext(
+				ctx,
 				query,
 				publicationID,
 			); erro != nil {
@@ -221,13 +234,14 @@ func (repository PublicationsRepository) LikePublication(publicationID, likerID 
 
 // UnLikePublication unlikes an publication in database
 func (repository PublicationsRepository) UnLikePublication(publicationID, unLikerID uint64) error {
-
-	tx, erro := repository.db.Begin()
+	ctx := context.Background()
+	tx, erro := repository.db.BeginTx(ctx, nil)
 	if erro != nil {
 		return erro
 	}
 
-	sqlQueries := []string{`
+	sqlQueries := []string{
+		`
 		UPDATE publications SET likes =
 		CASE
 			WHEN likes > 0 THEN likes - 1
@@ -242,7 +256,8 @@ func (repository PublicationsRepository) UnLikePublication(publicationID, unLike
 
 	for sqlQueryIndex, query := range sqlQueries {
 		if sqlQueryIndex == 0 {
-			if _, erro = repository.db.Exec(
+			if _, erro = tx.ExecContext(
+				ctx,
 				query,
 				publicationID,
 			); erro != nil {
@@ -250,7 +265,8 @@ func (repository PublicationsRepository) UnLikePublication(publicationID, unLike
 				return erro
 			}
 		} else if sqlQueryIndex == 1 {
-			if _, erro = repository.db.Exec(
+			if _, erro = tx.ExecContext(
+				ctx,
 				query,
 				publicationID, unLikerID,
 			); erro != nil {
@@ -269,7 +285,6 @@ func (repository PublicationsRepository) UnLikePublication(publicationID, unLike
 
 // GetLikers return all users who like an publication
 func (repository PublicationsRepository) GetLikers(publicationID uint64) ([]models.User, error) {
-
 	lines, erro := repository.db.Query(`
 		SELECT u.id, u.name, u.nick, u.createdat FROM
 		users u JOIN likes_of_publications p on u.id = p.liker_id WHERE p.publication_id = ?;

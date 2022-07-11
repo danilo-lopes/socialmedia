@@ -18,18 +18,18 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
-
-	"github.com/subosito/gotenv"
 )
 
 var (
-	// Database string connection
-	DatabaseStringConnection = ""
+	// Database information
+	DatabaseStringConnection string = ""
+	DatabaseHost             string = ""
+	DatabasePort             string = ""
+
 	// API Service Port
-	APIPort = 0
+	APIPort int = 0
 
 	// Used to assign the token
 	SecretKey []byte
@@ -39,19 +39,18 @@ var (
 func Load() {
 	var erro error
 
-	if erro := gotenv.Load(); erro != nil {
-		log.Fatal(erro)
-	}
-
-	// Will convert API_PORT string variable into int
 	APIPort, erro = strconv.Atoi(os.Getenv("API_PORT"))
 	if erro != nil {
-		APIPort = 6000
+		APIPort = 8080
 	}
 
-	DatabaseStringConnection = fmt.Sprintf("%s:%s@/%s?charset=utf8&parseTime=True&loc=Local&multiStatements=true",
+	DatabaseHost = os.Getenv("DB_HOST")
+	DatabasePort = os.Getenv("DB_PORT")
+	DatabaseStringConnection = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?tls=skip-verify&charset=utf8&parseTime=True&loc=Local",
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASS"),
+		DatabaseHost,
+		DatabasePort,
 		os.Getenv("DB_NAME"),
 	)
 

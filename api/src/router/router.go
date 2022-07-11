@@ -24,7 +24,6 @@ import (
 
 // Generate generate all API routes configured.
 func Generate() *mux.Router {
-
 	r := mux.NewRouter()
 
 	return routes.Configure(r)

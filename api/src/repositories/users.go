@@ -26,14 +26,13 @@ type usersRepository struct {
 	db *sql.DB
 }
 
-// NewUsersRepository creates a "users" repository
+// NewUsersRepository creates a Users repository
 func NewUsersRepository(db *sql.DB) *usersRepository {
 	return &usersRepository{db}
 }
 
-// Create creates a "User" in database
+// Create creates a User in database
 func (repository usersRepository) Create(user models.User) (uint64, error) {
-
 	statement, erro := repository.db.Prepare(
 		"INSERT INTO users (name, nick, email, pass) VALUES (?, ?, ?, ?)",
 	)
@@ -145,7 +144,6 @@ func (repository usersRepository) SearchByEmail(email string) (models.User, erro
 
 // Update updates an Users attributes into database
 func (repository usersRepository) Update(ID uint64, user models.User) error {
-
 	statement, erro := repository.db.Prepare(
 		"UPDATE users SET name = ?, nick = ?, email = ? WHERE id = ?",
 	)
@@ -163,7 +161,6 @@ func (repository usersRepository) Update(ID uint64, user models.User) error {
 
 // Delete delete an User into database
 func (repository usersRepository) Delete(ID uint64) error {
-
 	statement, erro := repository.db.Prepare(
 		"DELETE FROM users WHERE id = ?",
 	)
@@ -181,7 +178,6 @@ func (repository usersRepository) Delete(ID uint64) error {
 
 //Follow permits an User to follow another User
 func (repository usersRepository) Follow(userID, followerID uint64) error {
-
 	statement, erro := repository.db.Prepare(
 		"INSERT IGNORE INTO followers (user_id, follower_id) VALUES (?, ?)",
 	)
@@ -199,7 +195,6 @@ func (repository usersRepository) Follow(userID, followerID uint64) error {
 
 //Follow permits an User to unfollow another User
 func (repository usersRepository) UnFollow(userID, followerID uint64) error {
-
 	statement, erro := repository.db.Prepare(
 		"DELETE FROM followers WHERE user_id = ? and follower_id = ? ",
 	)
@@ -217,7 +212,6 @@ func (repository usersRepository) UnFollow(userID, followerID uint64) error {
 
 //GetFollowers return all followers from User
 func (repository usersRepository) GetFollowers(userID uint64) ([]models.User, error) {
-
 	lines, erro := repository.db.Query(`
 		SELECT u.id, u.name, u.nick, u.email, u.createdat
 		FROM users u INNER JOIN followers s on u.id = s.follower_id WHERE s.user_id = ?
@@ -251,7 +245,6 @@ func (repository usersRepository) GetFollowers(userID uint64) ([]models.User, er
 
 //GetFollowing return all users one user is following
 func (repository usersRepository) GetFollowing(userID uint64) ([]models.User, error) {
-
 	lines, erro := repository.db.Query(`
 		SELECT u.id, u.name, u.nick, u.email, u.createdat
 		FROM users u INNER JOIN followers s on u.id = s.user_id WHERE s.follower_id = ?
@@ -285,7 +278,6 @@ func (repository usersRepository) GetFollowing(userID uint64) ([]models.User, er
 
 // GetUserPass return the user password thought ID
 func (repository usersRepository) GetUserPass(userID uint64) (string, error) {
-
 	line, erro := repository.db.Query(
 		"SELECT pass FROM users WHERE id = ?",
 		userID,
@@ -310,7 +302,6 @@ func (repository usersRepository) GetUserPass(userID uint64) (string, error) {
 
 // UpadateUserPass update the user pass
 func (repository usersRepository) UpadateUserPass(userID uint64, pass string) error {
-
 	statement, erro := repository.db.Prepare(
 		"UPDATE users SET pass = ? WHERE id = ?",
 	)
@@ -328,7 +319,6 @@ func (repository usersRepository) UpadateUserPass(userID uint64, pass string) er
 
 // LikedPublication return all publications and user liked
 func (repository usersRepository) LikedPublications(userID uint64) ([]models.Publication, error) {
-
 	lines, erro := repository.db.Query(`
 		SELECT DISTINCT p.* FROM publications p
 		JOIN likes_of_publications l on p.id = l.publication_id
