@@ -25,9 +25,7 @@ import (
 )
 
 func main() {
-
 	r := router.Generate()
-
 	config.Load()
 
 	fmt.Printf("Serving on Port %d\n", config.APIPort)

@@ -24,6 +24,7 @@ import (
 
 // Hash receive password and hash it
 func Hash(pass string) ([]byte, error) {
+	// password lenth cant be higher then 72 bytes
 	if len([]byte(pass)) > 72 {
 		return nil, errors.New("the password cant be higher then 72 bytes")
 	}
