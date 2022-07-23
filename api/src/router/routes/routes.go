@@ -37,7 +37,6 @@ func Configure(r *mux.Router) *mux.Router {
 	apiRoutes = append(apiRoutes, loginRoute)
 	apiRoutes = append(apiRoutes, publicationsRoutes...)
 	apiRoutes = append(apiRoutes, healthcheckRoutes...)
-	apiRoutes = append(apiRoutes, metricRoutes)
 
 	for _, apiRoute := range apiRoutes {
 
