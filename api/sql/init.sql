@@ -1,7 +1,7 @@
-CREATE USER IF NOT EXISTS 'sm_svc'@'%' IDENTIFIED BY 'password';
-GRANT ALL PRIVILEGES ON sm.* TO 'sm_svc'@'%';
+CREATE USER 'sm_service'@'%' IDENTIFIED BY 'p@ssword';
 
 CREATE DATABASE IF NOT EXISTS sm;
+GRANT ALL PRIVILEGES ON sm.* TO 'sm_service'@'%';
 USE sm;
 
 DROP TABLE IF EXISTS publications;

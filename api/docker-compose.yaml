@@ -8,13 +8,11 @@ services:
     - "3306:3306"
     image: mysql/mysql-server:8.0
     volumes:
+    - ./sql/init.sql:/docker-entrypoint-initdb.d/10-init.sql
     - db-data:/var/lib/mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD:
-      MYSQL_DATABASE:
-      MYSQL_USER:
-      MYSQL_PASSWORD:
+      MYSQL_ROOT_PASSWORD: password
     networks:
       - sm_network
 
@@ -22,18 +20,18 @@ services:
     container_name: sm
     depends_on:
     - database
-    image: socialmedia:2.2
+    image: socialmedia:2.3
     ports:
     - "8080:8080"
     restart: always
     environment:
-      DB_HOST:
+      DB_HOST: database
       DB_PORT: 3306
-      DB_USER:
-      DB_PASS:
-      DB_NAME:
+      DB_USER: sm_service
+      DB_PASS: p@ssword
+      DB_NAME: sm
       API_PORT: 8080
-      SECRET_KEY: ''
+      SECRET_KEY: 'eMIXPdLcB1FIDE0OPjBIc9+X/By3yI0f4z3CKAoatYF+gCEnljSL+wCTEBzCLv7A'
     networks:
       - sm_network
 
