@@ -34,10 +34,19 @@ import (
 )
 
 var (
-	promCountNewPublication = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "created_publications_total",
-		Help: "Quantity Of Publications Created",
-	})
+	promCountNewPublication = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "created_publications_total",
+			Help: "Quantity Of Publications Created",
+		},
+	)
+
+	promCountDeletePublication = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "deleted_publications_total",
+			Help: "Quantity Of Publications Deleted",
+		},
+	)
 )
 
 // CreatePublication create a Publication in database
@@ -80,9 +89,9 @@ func CreatePublication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer db.Close()
+	promCountNewPublication.Inc()
 
 	responses.JSON(w, http.StatusCreated, publication)
-	promCountNewPublication.Inc()
 }
 
 // GetPublications return publications in feed
@@ -235,6 +244,7 @@ func DeletePublication(w http.ResponseWriter, r *http.Request) {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
+	promCountDeletePublication.Inc()
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }

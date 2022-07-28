@@ -12,7 +12,7 @@ services:
     - db-data:/var/lib/mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD}
     networks:
       - sm_network
 
@@ -28,10 +28,10 @@ services:
       DB_HOST: database
       DB_PORT: 3306
       DB_USER: sm_service
-      DB_PASS: p@ssword
+      DB_PASS: ${DATABASE_SM_USER_PASSWORD}
       DB_NAME: sm
       API_PORT: 8080
-      SECRET_KEY: 'eMIXPdLcB1FIDE0OPjBIc9+X/By3yI0f4z3CKAoatYF+gCEnljSL+wCTEBzCLv7A'
+      SECRET_KEY: ${SECRET_KEY}
     networks:
       - sm_network
 

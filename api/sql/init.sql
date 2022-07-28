@@ -4,8 +4,9 @@ CREATE DATABASE IF NOT EXISTS sm;
 GRANT ALL PRIVILEGES ON sm.* TO 'sm_service'@'%';
 USE sm;
 
-DROP TABLE IF EXISTS publications;
 DROP TABLE IF EXISTS followers;
+DROP TABLE IF EXISTS likes_of_publications;
+DROP TABLE IF EXISTS publications;
 DROP TABLE IF EXISTS users;
 
 CREATE TABLE users(

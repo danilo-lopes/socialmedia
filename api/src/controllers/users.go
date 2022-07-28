@@ -31,6 +31,24 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	promCountCreatedUsers = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "created_users_total",
+			Help: "Quantity Of Users Created",
+		},
+	)
+
+	promCountDeletedUsers = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "deleted_users_total",
+			Help: "Quantity Of Users Deleted",
+		},
+	)
 )
 
 // CreateUser creates a new "User" in database
@@ -60,11 +78,12 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewUsersRepository(db)
 	user.ID, erro = repository.Create(user)
-	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
+	defer db.Close()
+	promCountCreatedUsers.Inc()
 
 	responses.JSON(w, http.StatusCreated, user)
 }
@@ -201,6 +220,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer db.Close()
+	promCountDeletedUsers.Inc()
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }
