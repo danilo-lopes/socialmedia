@@ -29,6 +29,15 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	promCountNewPublication = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "created_publications_total",
+		Help: "Quantity Of Publications Created",
+	})
 )
 
 // CreatePublication create a Publication in database
@@ -73,6 +82,7 @@ func CreatePublication(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	responses.JSON(w, http.StatusCreated, publication)
+	promCountNewPublication.Inc()
 }
 
 // GetPublications return publications in feed

@@ -31,6 +31,13 @@ type Route struct {
 	AuthenticationRequired bool
 }
 
+type PromRoute struct {
+	URI                    string
+	Method                 string
+	Function               http.Handler
+	AuthenticationRequired bool
+}
+
 // Configure instanciate all API routes into mux router
 func Configure(r *mux.Router) *mux.Router {
 	apiRoutes := usersRoutes
@@ -39,7 +46,6 @@ func Configure(r *mux.Router) *mux.Router {
 	apiRoutes = append(apiRoutes, healthcheckRoutes...)
 
 	for _, apiRoute := range apiRoutes {
-
 		if apiRoute.AuthenticationRequired {
 			r.HandleFunc(apiRoute.URI,
 				middlewares.Logger(middlewares.Authenticate(apiRoute.Function)),
@@ -50,5 +56,12 @@ func Configure(r *mux.Router) *mux.Router {
 			).Methods(apiRoute.Method)
 		}
 	}
+
+	// Prometheus specific api routes
+	r.Handle(
+		metricsRoute.URI,
+		metricsRoute.Function,
+	).Methods(metricsRoute.Method)
+
 	return r
 }
