@@ -18,16 +18,20 @@ package main
 
 import (
 	"api/src/config"
+	"api/src/controllers"
 	"api/src/router"
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func main() {
 	r := router.Generate()
 	config.Load()
 
+	prometheus.Register(controllers.PromTimeTookToCreatePublication)
 	fmt.Printf("Serving on Port %d\n", config.APIPort)
 	log.Fatal(http.ListenAndServe(
 		fmt.Sprintf(":%d", config.APIPort), r),

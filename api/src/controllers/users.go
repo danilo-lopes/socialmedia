@@ -38,14 +38,14 @@ import (
 var (
 	promCountCreatedUsers = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "created_users_total",
+			Name: "sm_created_users_total",
 			Help: "Quantity Of Users Created",
 		},
 	)
 
 	promCountDeletedUsers = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "deleted_users_total",
+			Name: "sm_deleted_users_total",
 			Help: "Quantity Of Users Deleted",
 		},
 	)
@@ -78,11 +78,11 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewUsersRepository(db)
 	user.ID, erro = repository.Create(user)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 	promCountCreatedUsers.Inc()
 
 	responses.JSON(w, http.StatusCreated, user)
@@ -314,11 +314,11 @@ func GetFollowers(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewUsersRepository(db)
 	followers, erro := repository.GetFollowers(userID)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 
 	responses.JSON(w, http.StatusOK, followers)
 }
@@ -340,11 +340,11 @@ func GetFollowing(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewUsersRepository(db)
 	users, erro := repository.GetFollowing(userID)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 
 	responses.JSON(w, http.StatusOK, users)
 }
@@ -408,6 +408,7 @@ func UpdatePass(w http.ResponseWriter, r *http.Request) {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
+	defer db.Close()
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }
@@ -429,11 +430,11 @@ func LikedPublications(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewUsersRepository(db)
 	publications, erro := repository.LikedPublications(userID)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 
 	responses.JSON(w, http.StatusOK, publications)
 }

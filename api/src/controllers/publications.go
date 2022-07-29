@@ -24,9 +24,11 @@ import (
 	"api/src/responses"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
@@ -34,16 +36,24 @@ import (
 )
 
 var (
+	PromTimeTookToCreatePublication = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "sm_time_to_create_publication",
+			Help:    "Time took to create a new user",
+			Buckets: []float64{1, 2, 5, 6, 10},
+		}, []string{"code"},
+	)
+
 	promCountNewPublication = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "created_publications_total",
+			Name: "sm_created_publications_total",
 			Help: "Quantity Of Publications Created",
 		},
 	)
 
 	promCountDeletePublication = promauto.NewCounter(
 		prometheus.CounterOpts{
-			Name: "deleted_publications_total",
+			Name: "sm_deleted_publications_total",
 			Help: "Quantity Of Publications Deleted",
 		},
 	)
@@ -51,6 +61,9 @@ var (
 
 // CreatePublication create a Publication in database
 func CreatePublication(w http.ResponseWriter, r *http.Request) {
+	now := time.Now()
+	httpDuration := time.Since(now)
+
 	userID, erro := authentication.ExtractUserID(r)
 	if erro != nil {
 		responses.Erro(w, http.StatusUnauthorized, erro)
@@ -84,12 +97,13 @@ func CreatePublication(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewPublicationRepository(db)
 	publication.ID, erro = repository.Create(publication)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 	promCountNewPublication.Inc()
+	PromTimeTookToCreatePublication.WithLabelValues(fmt.Sprintf("%d", http.StatusOK)).Observe(httpDuration.Seconds())
 
 	responses.JSON(w, http.StatusCreated, publication)
 }
@@ -110,11 +124,11 @@ func GetPublications(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewPublicationRepository(db)
 	publications, erro := repository.Get(userID)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 
 	responses.JSON(w, http.StatusOK, publications)
 }
@@ -169,11 +183,11 @@ func UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	repository := repositories.NewPublicationRepository(db)
 
 	publicationDatabase, erro := repository.SearchByID(publicationID)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 
 	if publicationDatabase.AuthorID != userID {
 		responses.Erro(w, http.StatusForbidden, errors.New("is not possible to update publications from another user"))
@@ -227,13 +241,12 @@ func DeletePublication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repository := repositories.NewPublicationRepository(db)
-
 	publicationDatabase, erro := repository.SearchByID(publicationID)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 
 	if publicationDatabase.AuthorID != userID {
 		responses.Erro(w, http.StatusForbidden, errors.New("is not possible to delete publications from another user"))
@@ -266,11 +279,11 @@ func GetUserPublications(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewPublicationRepository(db)
 	publications, erro := repository.GetByUser(userID)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 
 	responses.JSON(w, http.StatusOK, publications)
 }
@@ -354,11 +367,11 @@ func GetLikers(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewPublicationRepository(db)
 	users, erro := repository.GetLikers(publicationID)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 
 	responses.JSON(w, http.StatusOK, users)
 }

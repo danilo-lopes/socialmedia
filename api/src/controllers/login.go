@@ -51,11 +51,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	repository := repositories.NewUsersRepository(db)
 	userFromDB, erro := repository.SearchByEmail(user.Email)
+	defer db.Close()
 	if erro != nil {
 		responses.Erro(w, http.StatusInternalServerError, erro)
 		return
 	}
-	defer db.Close()
 
 	if erro := security.ValidatePass(userFromDB.Pass, user.Pass); erro != nil {
 		responses.Erro(w, http.StatusUnauthorized, errors.New("incorrect password"))

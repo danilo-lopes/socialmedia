@@ -61,6 +61,17 @@ created_users_total 2
 # HELP deleted_users_total Quantity Of Users Deleted
 # TYPE deleted_users_total counter
 deleted_users_total 2
+
+# HELP sm_time_to_create_publication Time took to create a new user
+# TYPE sm_time_to_create_publication histogram
+sm_time_to_create_publication_bucket{code="200",le="1"} 1
+sm_time_to_create_publication_bucket{code="200",le="2"} 1
+sm_time_to_create_publication_bucket{code="200",le="5"} 1
+sm_time_to_create_publication_bucket{code="200",le="6"} 1
+sm_time_to_create_publication_bucket{code="200",le="10"} 1
+sm_time_to_create_publication_bucket{code="200",le="+Inf"} 1
+sm_time_to_create_publication_sum{code="200"} 2e-07
+sm_time_to_create_publication_count{code="200"} 1
 ```
 
 ## Running Localy
