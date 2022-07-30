@@ -48,16 +48,16 @@ func Configure(r *mux.Router) *mux.Router {
 	for _, apiRoute := range apiRoutes {
 		if apiRoute.AuthenticationRequired {
 			r.HandleFunc(apiRoute.URI,
-				middlewares.Logger(middlewares.Authenticate(apiRoute.Function)),
+				middlewares.Logger(apiRoute.URI, middlewares.Authenticate(apiRoute.Function)),
 			).Methods(apiRoute.Method)
 		} else {
 			r.HandleFunc(apiRoute.URI,
-				middlewares.Logger(apiRoute.Function),
+				middlewares.Logger(apiRoute.URI, apiRoute.Function),
 			).Methods(apiRoute.Method)
 		}
 	}
 
-	// Prometheus specific api routes
+	// Prometheus api route
 	r.Handle(
 		metricsRoute.URI,
 		metricsRoute.Function,

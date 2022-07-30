@@ -20,9 +20,12 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 )
 
 var (
+	// Application Variables
+
 	// Database information
 	DatabaseStringConnection string = ""
 	DatabaseHost             string = ""
@@ -33,6 +36,8 @@ var (
 
 	// Used to assign the token
 	SecretKey []byte
+
+	Now time.Time
 )
 
 // Load inicialize environment variables, configure database string connection and set which port the api will run.

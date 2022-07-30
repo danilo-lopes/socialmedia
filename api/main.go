@@ -18,11 +18,13 @@ package main
 
 import (
 	"api/src/config"
-	"api/src/controllers"
+	"api/src/prommetrics"
 	"api/src/router"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -31,9 +33,28 @@ func main() {
 	r := router.Generate()
 	config.Load()
 
-	prometheus.Register(controllers.PromTimeTookToCreatePublication)
+	prommetrics.Load()
+	for _, metric := range prommetrics.Metrics {
+		prometheus.MustRegister(metric)
+	}
+
+	s := &http.Server{
+		Addr:         fmt.Sprintf(":%d", config.APIPort),
+		Handler:      r,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		ConnState: func(c net.Conn, s http.ConnState) {
+			switch s {
+			case http.StateNew:
+				prommetrics.PromOpenedConnections.Inc()
+			case http.StateHijacked:
+				prommetrics.PromOpenedConnections.Dec()
+			case http.StateClosed:
+				prommetrics.PromOpenedConnections.Dec()
+			}
+		},
+	}
+
 	fmt.Printf("Serving on Port %d\n", config.APIPort)
-	log.Fatal(http.ListenAndServe(
-		fmt.Sprintf(":%d", config.APIPort), r),
-	)
+	log.Fatal(s.ListenAndServe())
 }

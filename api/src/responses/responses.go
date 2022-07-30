@@ -17,28 +17,23 @@ limitations under the License.
 package responses
 
 import (
+	"api/src/prommetrics"
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 )
 
-func PlainText(w http.ResponseWriter, statusCode int, data []string) {
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(statusCode)
-
-	if len(data) > 0 {
-		for _, metric := range data {
-			w.Write([]byte(metric))
-		}
-	}
-}
-
 // JSON returns json response
-func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
+func JSON(startedTime time.Time, w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
 	if data != nil {
+		prommetrics.PromRequestsDuration.Observe(time.Since(startedTime).Seconds())
+		prommetrics.PromRequestsCurrent.Dec()
+		prommetrics.PromRequestStatus.WithLabelValues(strconv.Itoa(statusCode)).Inc()
 		if erro := json.NewEncoder(w).Encode(data); erro != nil {
 			log.Fatal(erro)
 		}
@@ -46,8 +41,10 @@ func JSON(w http.ResponseWriter, statusCode int, data interface{}) {
 }
 
 // Erro returns an error json response
-func Erro(w http.ResponseWriter, statusCode int, erro error) {
-	JSON(w, statusCode, struct {
+func Erro(startedTime time.Time, w http.ResponseWriter, statusCode int, erro error) {
+	prommetrics.PromClientErrors.Inc()
+
+	JSON(startedTime, w, statusCode, struct {
 		Erro string `json:"erro"`
 	}{
 		Erro: erro.Error(),

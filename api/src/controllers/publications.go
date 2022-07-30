@@ -20,6 +20,7 @@ import (
 	"api/src/authentication"
 	"api/src/database"
 	"api/src/models"
+	"api/src/prommetrics"
 	"api/src/repositories"
 	"api/src/responses"
 	"encoding/json"
@@ -31,67 +32,42 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-)
-
-var (
-	PromTimeTookToCreatePublication = promauto.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "sm_time_to_create_publication",
-			Help:    "Time took to create a new user",
-			Buckets: []float64{1, 2, 5, 6, 10},
-		}, []string{"code"},
-	)
-
-	promCountNewPublication = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "sm_created_publications_total",
-			Help: "Quantity Of Publications Created",
-		},
-	)
-
-	promCountDeletePublication = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "sm_deleted_publications_total",
-			Help: "Quantity Of Publications Deleted",
-		},
-	)
 )
 
 // CreatePublication create a Publication in database
 func CreatePublication(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
 	now := time.Now()
 	httpDuration := time.Since(now)
 
 	userID, erro := authentication.ExtractUserID(r)
 	if erro != nil {
-		responses.Erro(w, http.StatusUnauthorized, erro)
+		responses.Erro(now, w, http.StatusUnauthorized, erro)
 		return
 	}
 
 	body, erro := ioutil.ReadAll(r.Body)
 	if erro != nil {
-		responses.Erro(w, http.StatusUnprocessableEntity, erro)
+		responses.Erro(now, w, http.StatusUnprocessableEntity, erro)
 		return
 	}
 
 	var publication models.Publication
 	if erro := json.Unmarshal(body, &publication); erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
 	publication.AuthorID = userID
 
 	if erro := publication.Prepare(); erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
@@ -99,26 +75,29 @@ func CreatePublication(w http.ResponseWriter, r *http.Request) {
 	publication.ID, erro = repository.Create(publication)
 	defer db.Close()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
-	promCountNewPublication.Inc()
-	PromTimeTookToCreatePublication.WithLabelValues(fmt.Sprintf("%d", http.StatusOK)).Observe(httpDuration.Seconds())
+	prommetrics.PromCountNewPublication.Inc()
+	prommetrics.PromTimeTookToCreatePublication.WithLabelValues(fmt.Sprintf("%d", http.StatusOK)).Observe(httpDuration.Seconds())
 
-	responses.JSON(w, http.StatusCreated, publication)
+	responses.JSON(now, w, http.StatusCreated, publication)
 }
 
 // GetPublications return publications in feed
 func GetPublications(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	userID, erro := authentication.ExtractUserID(r)
 	if erro != nil {
-		responses.Erro(w, http.StatusUnauthorized, erro)
+		responses.Erro(now, w, http.StatusUnauthorized, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
@@ -126,57 +105,63 @@ func GetPublications(w http.ResponseWriter, r *http.Request) {
 	publications, erro := repository.Get(userID)
 	defer db.Close()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
-	responses.JSON(w, http.StatusOK, publications)
+	responses.JSON(now, w, http.StatusOK, publications)
 }
 
 // GetPublication return one Publication
 func GetPublication(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	params := mux.Vars(r)
 	publicationID, erro := strconv.ParseUint(params["publicationID"], 10, 64)
 	if erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
 	repository := repositories.NewPublicationRepository(db)
 	publication, erro := repository.SearchByID(publicationID)
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 	defer db.Close()
 
-	responses.JSON(w, http.StatusOK, publication)
+	responses.JSON(now, w, http.StatusOK, publication)
 }
 
 // UpdatePublication updates one Publication
 func UpdatePublication(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	userID, erro := authentication.ExtractUserID(r)
 	if erro != nil {
-		responses.Erro(w, http.StatusUnauthorized, erro)
+		responses.Erro(now, w, http.StatusUnauthorized, erro)
 		return
 	}
 
 	params := mux.Vars(r)
 	publicationID, erro := strconv.ParseUint(params["publicationID"], 10, 64)
 	if erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
@@ -185,58 +170,62 @@ func UpdatePublication(w http.ResponseWriter, r *http.Request) {
 	publicationDatabase, erro := repository.SearchByID(publicationID)
 	defer db.Close()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
 	if publicationDatabase.AuthorID != userID {
-		responses.Erro(w, http.StatusForbidden, errors.New("is not possible to update publications from another user"))
+		responses.Erro(now, w, http.StatusForbidden, errors.New("is not possible to update publications from another user"))
 		return
 	}
 
 	body, erro := ioutil.ReadAll(r.Body)
 	if erro != nil {
-		responses.Erro(w, http.StatusUnprocessableEntity, erro)
+		responses.Erro(now, w, http.StatusUnprocessableEntity, erro)
 		return
 	}
 
 	var publication models.Publication
 	if erro := json.Unmarshal(body, &publication); erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	if erro := publication.Prepare(); erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	if erro := repository.Update(publication.ID, publication); erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
-	responses.JSON(w, http.StatusNoContent, nil)
+	responses.JSON(now, w, http.StatusNoContent, nil)
 }
 
 // DeletePublication delete one Publication
 func DeletePublication(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+	httpDuration := time.Since(now)
+
 	userID, erro := authentication.ExtractUserID(r)
 	if erro != nil {
-		responses.Erro(w, http.StatusUnauthorized, erro)
+		responses.Erro(now, w, http.StatusUnauthorized, erro)
 		return
 	}
 
 	params := mux.Vars(r)
 	publicationID, erro := strconv.ParseUint(params["publicationID"], 10, 64)
 	if erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
@@ -244,36 +233,40 @@ func DeletePublication(w http.ResponseWriter, r *http.Request) {
 	publicationDatabase, erro := repository.SearchByID(publicationID)
 	defer db.Close()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
 	if publicationDatabase.AuthorID != userID {
-		responses.Erro(w, http.StatusForbidden, errors.New("is not possible to delete publications from another user"))
+		responses.Erro(now, w, http.StatusForbidden, errors.New("is not possible to delete publications from another user"))
 		return
 	}
 
 	if erro := repository.Delete(publicationID); erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
-	promCountDeletePublication.Inc()
+	prommetrics.PromCountDeletePublication.Inc()
+	prommetrics.PromTimeTookToDeletePublication.WithLabelValues(fmt.Sprintf("%d", http.StatusOK)).Observe(httpDuration.Seconds())
 
-	responses.JSON(w, http.StatusNoContent, nil)
+	responses.JSON(now, w, http.StatusNoContent, nil)
 }
 
 // GetUserPublications return all user publications
 func GetUserPublications(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	params := mux.Vars(r)
 	userID, erro := strconv.ParseUint(params["userID"], 10, 64)
 	if erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
@@ -281,87 +274,96 @@ func GetUserPublications(w http.ResponseWriter, r *http.Request) {
 	publications, erro := repository.GetByUser(userID)
 	defer db.Close()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
-	responses.JSON(w, http.StatusOK, publications)
+	responses.JSON(now, w, http.StatusOK, publications)
 }
 
 // LikePublication likes an publication
 func LikePublication(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	params := mux.Vars(r)
 	publicationID, erro := strconv.ParseUint(params["publicationID"], 10, 64)
 	if erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	likerID, erro := authentication.ExtractUserID(r)
 	if erro != nil {
-		responses.Erro(w, http.StatusUnauthorized, erro)
+		responses.Erro(now, w, http.StatusUnauthorized, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
 	repository := repositories.NewPublicationRepository(db)
 	if erro := repository.LikePublication(publicationID, likerID); erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 	defer db.Close()
 
-	responses.JSON(w, http.StatusNoContent, nil)
+	responses.JSON(now, w, http.StatusNoContent, nil)
 }
 
 // UnLikePublication unlikes an publication
 func UnLikePublication(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	params := mux.Vars(r)
 	publicationID, erro := strconv.ParseUint(params["publicationID"], 10, 64)
 	if erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	unLikerID, erro := authentication.ExtractUserID(r)
 	if erro != nil {
-		responses.Erro(w, http.StatusUnauthorized, erro)
+		responses.Erro(now, w, http.StatusUnauthorized, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
 	repository := repositories.NewPublicationRepository(db)
 	if erro := repository.UnLikePublication(publicationID, unLikerID); erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 	defer db.Close()
 
-	responses.JSON(w, http.StatusNoContent, nil)
+	responses.JSON(now, w, http.StatusNoContent, nil)
 }
 
 // GetLikers return all users who liked an publication
 func GetLikers(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	params := mux.Vars(r)
 	publicationID, erro := strconv.ParseUint(params["publicationID"], 10, 64)
 	if erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
@@ -369,9 +371,9 @@ func GetLikers(w http.ResponseWriter, r *http.Request) {
 	users, erro := repository.GetLikers(publicationID)
 	defer db.Close()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
-	responses.JSON(w, http.StatusOK, users)
+	responses.JSON(now, w, http.StatusOK, users)
 }

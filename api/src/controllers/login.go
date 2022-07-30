@@ -20,6 +20,7 @@ import (
 	"api/src/authentication"
 	"api/src/database"
 	"api/src/models"
+	"api/src/prommetrics"
 	"api/src/repositories"
 	"api/src/responses"
 	"api/src/security"
@@ -27,25 +28,29 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 // Login authenticate an User
 func Login(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	body, erro := ioutil.ReadAll(r.Body)
 	if erro != nil {
-		responses.Erro(w, http.StatusUnprocessableEntity, erro)
+		responses.Erro(now, w, http.StatusUnprocessableEntity, erro)
 		return
 	}
 
 	var user models.User
 	if erro := json.Unmarshal(body, &user); erro != nil {
-		responses.Erro(w, http.StatusBadRequest, erro)
+		responses.Erro(now, w, http.StatusBadRequest, erro)
 		return
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
@@ -53,18 +58,18 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	userFromDB, erro := repository.SearchByEmail(user.Email)
 	defer db.Close()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 
 	if erro := security.ValidatePass(userFromDB.Pass, user.Pass); erro != nil {
-		responses.Erro(w, http.StatusUnauthorized, errors.New("incorrect password"))
+		responses.Erro(now, w, http.StatusUnauthorized, errors.New("incorrect password"))
 		return
 	}
 
 	token, erro := authentication.GenerateToken(userFromDB.ID)
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 

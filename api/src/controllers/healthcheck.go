@@ -19,54 +19,62 @@ package controllers
 import (
 	"api/src/config"
 	"api/src/database"
+	"api/src/prommetrics"
 	"api/src/repositories"
 	"api/src/responses"
 	"errors"
 	"net/http"
+	"time"
 )
 
 // Ready validates if our API is live and can process the requests received
 func Live(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 	repository := repositories.NewHealthcheckRepository(db)
 	if erro := repository.SimulateDatabaseInsert(); erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 	defer db.Close()
 
-	responses.JSON(w, http.StatusOK, nil)
+	responses.JSON(now, w, http.StatusOK, nil)
 }
 
 // Ready validates if our API is ready to receive network connection and provide his main functionality
 func Ready(w http.ResponseWriter, r *http.Request) {
+	prommetrics.PromRequestsCurrent.Inc()
+	now := time.Now()
+
 	var hosts = []string{
 		config.DatabaseHost,
 	}
 
 	db, erro := database.Connect()
 	if erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 	repository := repositories.NewHealthcheckRepository(db)
 
 	for _, host := range hosts {
 		if erro := repository.DNSResolver(host); erro != nil {
-			responses.Erro(w, http.StatusInternalServerError, errors.New(host))
+			responses.Erro(now, w, http.StatusInternalServerError, errors.New(host))
 			return
 		}
 	}
 
 	if erro := repository.PingDatabase(); erro != nil {
-		responses.Erro(w, http.StatusInternalServerError, erro)
+		responses.Erro(now, w, http.StatusInternalServerError, erro)
 		return
 	}
 	defer db.Close()
 
-	responses.JSON(w, http.StatusOK, nil)
+	responses.JSON(now, w, http.StatusOK, nil)
 }
