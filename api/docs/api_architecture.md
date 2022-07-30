@@ -2,7 +2,7 @@
 
 The database schema representation:
 
-![DB Schema](../assets/database-schema.jpg =100x20)
+<img src="../assets/database-schema.jpg" width="700">
 
 ## Business Functionalities:
 
