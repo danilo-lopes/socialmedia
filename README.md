@@ -11,3 +11,5 @@ O código se divide em duas frentes:
 2. **FrontEnd** - Frontend para servir uma interface gráfica amigável e facilitar o uso da aplicação.
 
 > No diretório `api` você encontrará o código fonte do backend e no diretório `sm` o códido conte do frontend.
+
+## Colocando uma Feature nova.
