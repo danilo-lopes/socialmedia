@@ -6,11 +6,8 @@ pipeline {
       when { branch 'PR-*' }
 
       steps {
-        script {
-          sh '''
-            echo Este step é executado apenas quando tiver um PR aberto
-          '''
-        }
+        echo "esse step e executado apenas quando tiver um PR aberto"
+        echo env.BRANCH_NAME
       }
     }
   }
