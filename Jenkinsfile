@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   stages {
-    stage('PR - Feature - Teste Unitario') {
+    stage('PR - Teste Unitario') {
       when { branch 'PR-*' }
 
       steps {
@@ -17,7 +17,9 @@ pipeline {
 
   post {
     always {
-      deleteDir()
+      node('main'){
+        deleteDir()
+      }
     }
 
     success {
